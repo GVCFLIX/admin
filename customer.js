@@ -17,6 +17,7 @@ function loadCustomerProducts() {
           <p>Code: ${p.code}</p>
           <p>Size: ${p.size}</p>
           <p>Price: ${p.price} MMK</p>
+          <p>Stock: ${p.stock}</p>
           <button class="bg-blue-500 text-white w-full py-1 mt-2" onclick="addToCart('${p.title}', '${p.code}', ${p.price})">Add to Cart</button>
         `;
         container.appendChild(card);
@@ -107,11 +108,14 @@ function cancelCheckout() {
 function calculateDiscount() {
   let total = 0;
   for (let code in cart) total += cart[code].price * cart[code].qty;
-  const discount = total > 50000 ? 5000 : 0; // Example discount logic
+  const discount = total > 50000 ? 5000 : 0;
   const net = total - discount;
-  // Use innerText for multiple lines or better to update 3 separate spans if needed
-  document.getElementById("checkoutTotal").innerText = `Total: ${total} MMK\nDiscount: ${discount} MMK\nNet: ${net} MMK`;
+
+  document.getElementById("checkoutTotalAmount").innerText = total;
+  document.getElementById("checkoutDiscount").innerText = discount;
+  document.getElementById("checkoutNet").innerText = net;
 }
+
 
 function placeOrder() {
   const name = document.getElementById("custName").value.trim();
@@ -190,5 +194,5 @@ function placeOrder() {
 // Initial load and periodic refresh
 document.addEventListener("DOMContentLoaded", () => {
   loadCustomerProducts();
-  setInterval(loadCustomerProducts, 15000); // Refresh every 15 seconds
+  setInterval(loadCustomerProducts, 30000); // Refresh every 30 seconds
 });

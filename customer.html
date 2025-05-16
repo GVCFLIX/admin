@@ -63,6 +63,13 @@
           <input id="custPhone" type="text" placeholder="Phone Number" class="form-control mb-2">
           <input id="custEmail" type="email" placeholder="Email" class="form-control mb-2">
           <input id="custAddress" type="text" placeholder="Address" class="form-control mb-2">
+
+          <!-- 🆕 Summary Area -->
+          <div id="checkoutSummary" class="mt-3 border-top pt-3">
+            <p>Total: <span id="checkoutTotalAmount">0</span> MMK</p>
+            <p>Discount: <span id="checkoutDiscount">0</span> MMK</p>
+            <p>Net Total: <span id="checkoutNet">0</span> MMK</p>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-success" onclick="placeOrder()">Place Order</button>
