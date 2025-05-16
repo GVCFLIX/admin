@@ -1,136 +1,130 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbweaRGbyHhZkvgpSl80opRnLnG9GeF93Uy4BFTzOtHgHNEC_4DHDrJ7643pSy__A2YFWA/exec'; // Replace with your Apps Script Web App URL
+// admin.js
+const API_URL = "https://script.google.com/macros/s/AKfycbweaRGbyHhZkvgpSl80opRnLnG9GeF93Uy4BFTzOtHgHNEC_4DHDrJ7643pSy__A2YFWA/exec";
 
-// Upload Product
-async function uploadProduct() {
-  const data = {
-    action: 'uploadProduct',
-    image: document.getElementById('imgUrl').value,
-    title: document.getElementById('title').value,
-    itemCode: document.getElementById('itemCode').value,
-    size: document.getElementById('size').value,
-    price: document.getElementById('price').value,
-    stock: document.getElementById('stock').value,
-    info: document.getElementById('details').value,
-  };
+function loginAdmin() {
+  const email = document.getElementById("adminEmail").value.trim();
+  const pass = document.getElementById("adminPassword").value.trim();
 
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    body: JSON.stringify(data)
-  });
-
-  const json = await res.json();
-  alert(json.message);
-  loadProducts();
+  fetch(API_URL + `?action=verifyUser&email=${encodeURIComponent(email)}&password=${encodeURIComponent(pass)}`)
+    .then(res => res.json())
+    .then(resp => {
+      if (resp.valid) {
+        document.getElementById("loginSection").classList.add("hidden");
+        document.getElementById("dashboardSection").classList.remove("hidden");
+        loadProducts();
+        setInterval(loadProducts, 15000);
+        loadOrders();
+      } else {
+        alert("Invalid login credentials");
+      }
+    })
+    .catch(() => alert("Login error. Please try again later."));
 }
 
-// Load Product List
-async function loadProducts() {
-  const res = await fetch(`${API_URL}?action=getProducts`);
-  const products = await res.json();
-  const list = document.getElementById('productList');
-  list.innerHTML = '';
+function logout() {
+  document.getElementById("loginSection").classList.remove("hidden");
+  document.getElementById("dashboardSection").classList.add("hidden");
+}
 
-  products.forEach((p, index) => {
-    const card = document.createElement('div');
-    card.className = 'col';
-    card.innerHTML = `
-      <div class="card h-100">
-        <img src="${p.image}" class="card-img-top">
-        <div class="card-body">
-          <h5>${p.title}</h5>
-          <p>Item Code: ${p.itemCode}</p>
-          <p>Size: ${p.size}</p>
-          <input type="number" class="form-control mb-2" value="${p.price}" onchange="updateProduct(${index}, 'price', this.value)">
-          <input type="number" class="form-control" value="${p.stock}" onchange="updateProduct(${index}, 'stock', this.value)">
+function uploadProduct() {
+  const data = {
+    action: "uploadProduct",
+    imgURL: document.getElementById("imgURL").value,
+    title: document.getElementById("title").value,
+    code: document.getElementById("itemCode").value,
+    size: document.getElementById("size").value,
+    price: document.getElementById("price").value,
+    stock: document.getElementById("stock").value
+  };
+
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(data)
+  }).then(res => res.json()).then(resp => {
+    alert("Product Uploaded");
+    clearForm();
+    loadProducts();
+  });
+}
+
+function clearForm() {
+  ["imgURL", "title", "itemCode", "size", "price", "stock"].forEach(id => document.getElementById(id).value = "");
+}
+
+function loadProducts() {
+  fetch(API_URL + "?action=getProducts")
+    .then(res => res.json())
+    .then(data => {
+      const container = document.getElementById("productTable");
+      container.innerHTML = data.map((item, i) => `
+        <div class="d-flex align-items-center border p-2 mb-2">
+          <img src="${item.imgURL}" class="me-3" width="80" height="80">
+          <div class="flex-grow-1">
+            <div><b>${item.title}</b></div>
+            <div>Code: ${item.code}</div>
+            <div>
+              Size: <input value="${item.size}" onchange="updateProduct(${i}, 'size', this.value)">
+              Price: <input value="${item.price}" onchange="updateProduct(${i}, 'price', this.value)">
+              Stock: <input value="${item.stock}" onchange="updateProduct(${i}, 'stock', this.value)">
+            </div>
+          </div>
+          <button class="btn btn-danger ms-3" onclick="deleteProduct(${i})">Delete</button>
         </div>
-      </div>`;
-    list.appendChild(card);
+      `).join('');
+    });
+}
+
+function updateProduct(index, field, value) {
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ action: "updateProduct", index, field, value })
   });
 }
 
-// Update Product Price/Stock
-async function updateProduct(index, field, value) {
-  const res = await fetch(`${API_URL}?action=getProducts`);
-  const products = await res.json();
-  const data = {
-    action: 'updateProduct',
-    row: index + 2,
-    field,
-    value
-  };
-  await fetch(API_URL, {
-    method: 'POST',
-    body: JSON.stringify(data)
-  });
+function deleteProduct(index) {
+  if (confirm("Are you sure to delete this product?")) {
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "deleteProduct", index })
+    }).then(() => loadProducts());
+  }
 }
 
-// Load Orders
-async function loadOrders() {
-  const res = await fetch(`${API_URL}?action=getOrders`);
-  const orders = await res.json();
-  const list = document.getElementById('orderList');
-  list.innerHTML = '';
-
-  orders.forEach((o, index) => {
-    const card = document.createElement('div');
-    card.className = 'col';
-    card.innerHTML = `
-      <div class="card p-3">
-        <h6>${o.ordId}</h6>
-        <p><b>${o.productName}</b></p>
-        <p>Code: ${o.itemCode}</p>
-        <p>Name: ${o.name}</p>
-        <p>Phone: ${o.phone}</p>
-        <button class="btn btn-outline-primary" onclick="viewOrder(${index})">View Details</button>
-      </div>`;
-    list.appendChild(card);
-  });
-
-  window.orderCache = orders;
+function loadOrders() {
+  fetch(API_URL + "?action=getOrders")
+    .then(res => res.json())
+    .then(data => {
+      const container = document.getElementById("ordersTable");
+      container.innerHTML = data.map((order, i) => `
+        <div class="d-flex justify-content-between align-items-center border p-2 mb-2">
+          <div>Order ID: ${order.id} | Name: ${order.name} | Status: ${order.status}</div>
+          <div>
+            <button class="btn btn-sm btn-info" onclick='viewOrder(${JSON.stringify(order)})'>View</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteOrder(${i})">Delete</button>
+          </div>
+        </div>`).join('');
+    });
 }
 
-// View Order Details
-function viewOrder(index) {
-  const o = window.orderCache[index];
-  document.getElementById('orderDetails').innerHTML = `
-    <p><b>Order ID:</b> ${o.ordId}</p>
-    <p><b>Title:</b> ${o.productName}</p>
-    <p><b>Item Code:</b> ${o.itemCode}</p>
-    <p><b>Size:</b> ${o.size}</p>
-    <p><b>Total:</b> ${o.totalPrice} MMK</p>
-    <p><b>Name:</b> ${o.name}</p>
-    <p><b>Phone:</b> ${o.phone}</p>
-    <p><b>Email:</b> ${o.email}</p>
-    <p><b>Address:</b> ${o.address}</p>`;
-  document.getElementById('orderStatus').value = o.status;
-  window.currentOrderIndex = index;
-  new bootstrap.Modal(document.getElementById('orderModal')).show();
+function viewOrder(order) {
+  document.getElementById("orderDetailsBody").innerHTML = `
+    <p>Order ID: ${order.id}</p>
+    <p>Name: ${order.name}</p>
+    <p>Phone: ${order.phone}</p>
+    <p>Email: ${order.email}</p>
+    <p>Item Code: ${order.code}</p>
+    <p>Total: ${order.total}</p>
+    <p>Discount: ${order.discount}</p>
+    <p>Net Total: ${order.netTotal}</p>
+  `;
+  new bootstrap.Modal(document.getElementById("orderDetailsModal")).show();
 }
 
-// Update Order Status
-async function updateOrderStatus() {
-  const o = window.orderCache[window.currentOrderIndex];
-  const newStatus = document.getElementById('orderStatus').value;
-
-  const data = {
-    action: 'updateOrderStatus',
-    ordId: o.ordId,
-    newStatus
-  };
-
-  await fetch(API_URL, {
-    method: 'POST',
-    body: JSON.stringify(data)
-  });
-
-  alert('Order status updated');
-  loadOrders();
+function deleteOrder(index) {
+  if (confirm("Are you sure to delete this order?")) {
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "deleteOrder", index })
+    }).then(() => loadOrders());
+  }
 }
-
-// Initial load
-loadProducts();
-loadOrders();
-setInterval(() => {
-  loadProducts();
-  loadOrders();
-}, 15000);

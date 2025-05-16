@@ -1,120 +1,194 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbweaRGbyHhZkvgpSl80opRnLnG9GeF93Uy4BFTzOtHgHNEC_4DHDrJ7643pSy__A2YFWA/exec'; // Replace with your Apps Script URL
+const API_URL = "https://script.google.com/macros/s/AKfycbweaRGbyHhZkvgpSl80opRnLnG9GeF93Uy4BFTzOtHgHNEC_4DHDrJ7643pSy__A2YFWA/exec";
+let cart = {};
 
-let cart = JSON.parse(localStorage.getItem('cart')) || [];
-updateCartNoti();
-
-// Fetch Products
-async function fetchProducts() {
-  const res = await fetch(`${API_URL}?action=getProducts`);
-  const products = await res.json();
-  const list = document.getElementById('productList');
-  list.innerHTML = '';
-
-  products.forEach(p => {
-    const card = document.createElement('div');
-    card.className = 'col';
-    card.innerHTML = `
-      <div class="card h-100">
-        <img src="${p.image}" class="card-img-top" onclick="zoomImage('${p.image}')">
-        <div class="card-body">
-          <h5>${p.title}</h5>
-          <p>${p.price} MMK</p>
-          <button class="btn btn-primary" onclick='addToCart(${JSON.stringify(p)})'>Add to Cart</button>
-        </div>
-      </div>`;
-    list.appendChild(card);
-  });
-}
-
-// Zoom Image
-function zoomImage(url) {
-  document.getElementById('modalImg').src = url;
-  new bootstrap.Modal(document.getElementById('imgModal')).show();
-}
-
-// Add to Cart
-function addToCart(product) {
-  const existing = cart.find(i => i.itemCode === product.itemCode && i.size === product.size);
-  if (existing) existing.qty++;
-  else cart.push({ ...product, qty: 1 });
-  localStorage.setItem('cart', JSON.stringify(cart));
-  updateCartNoti();
-}
-
-// Cart Count Notification
-function updateCartNoti() {
-  const noti = document.getElementById('cartNoti');
-  const total = cart.reduce((sum, i) => sum + i.qty, 0);
-  if (total > 0) {
-    noti.innerText = total;
-    noti.style.display = 'inline-block';
-  } else {
-    noti.style.display = 'none';
-  }
-}
-
-// Show Cart Modal
-function showCart() {
-  const summary = cart.map(item =>
-    `<li>${item.title} x ${item.qty} = ${item.price * item.qty} MMK</li>`).join('');
-  const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
-  document.getElementById('checkoutSummary').innerHTML = `
-    <ul>${summary}</ul>
-    <p>Total: ${total} MMK</p>
-    <p id="discountLine"></p>
-    <p id="netLine"></p>`;
-  new bootstrap.Modal(document.getElementById('checkoutModal')).show();
-}
-
-// Check Discount
-async function checkDiscount() {
-  const phone = document.getElementById('cPhone').value;
-  const res = await fetch(`${API_URL}?action=checkDiscount&phone=${phone}`);
-  const json = await res.json();
-  const discount = json.discount || 0;
-  const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
-  const discountAmt = (total * discount) / 100;
-  const net = total - discountAmt;
-  document.getElementById('discountLine').innerText = `Discount: ${discountAmt} MMK`;
-  document.getElementById('netLine').innerText = `Net Total: ${net} MMK`;
-  window.orderSummary = { discountAmt, total, net, discount };
-}
-
-// Submit Order
-async function submitOrder() {
-  const ordId = 'ORD-' + Math.random().toString().slice(2, 10);
-  const name = document.getElementById('cName').value;
-  const phone = document.getElementById('cPhone').value;
-  const email = document.getElementById('cEmail').value;
-  const address = document.getElementById('cAddress').value;
-
-  for (let item of cart) {
-    const data = {
-      action: 'submitOrder',
-      ordId,
-      name,
-      phone,
-      email,
-      address,
-      itemCode: item.itemCode,
-      productName: item.title,
-      size: item.size,
-      price: item.price,
-      discountPrice: window.orderSummary.discountAmt,
-      totalPrice: window.orderSummary.net,
-    };
-
-    await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify(data)
+// Display products
+function loadCustomerProducts() {
+  fetch(API_URL + "?action=getProducts")
+    .then(res => res.json())
+    .then(products => {
+      const container = document.getElementById("productContainer");
+      container.innerHTML = "";
+      products.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "card m-2 p-2 border shadow w-72";
+        card.innerHTML = `
+          <img src="${p.imgURL}" class="w-full h-40 object-cover cursor-pointer" onclick="openImageModal('${p.imgURL}')" />
+          <h4 class="font-bold mt-2">${p.title}</h4>
+          <p>Code: ${p.code}</p>
+          <p>Size: ${p.size}</p>
+          <p>Price: ${p.price} MMK</p>
+          <button class="bg-blue-500 text-white w-full py-1 mt-2" onclick="addToCart('${p.title}', '${p.code}', ${p.price})">Add to Cart</button>
+        `;
+        container.appendChild(card);
+      });
+    })
+    .catch(err => {
+      console.error("Error loading products:", err);
+      document.getElementById("productContainer").innerHTML = "<p class='text-red-500'>Failed to load products. Please try again later.</p>";
     });
-  }
-
-  alert('Order placed! Confirmation email sent.');
-  cart = [];
-  localStorage.removeItem('cart');
-  updateCartNoti();
 }
 
-fetchProducts();
-setInterval(fetchProducts, 15000);
+// Add to cart
+function addToCart(title, code, price) {
+  if (cart[code]) {
+    cart[code].qty++;
+  } else {
+    cart[code] = { title, price, qty: 1 };
+  }
+  // Instead of alert, you can implement a nicer UI notification
+  alert(`${title} added to cart.`);
+}
+
+// Open image in modal
+function openImageModal(url) {
+  const modalImg = document.getElementById("fullImage");
+  modalImg.src = url;
+  const imageModal = new bootstrap.Modal(document.getElementById("imageModal"));
+  imageModal.show();
+}
+
+// Show cart modal
+function openCartModal() {
+  const cartItems = document.getElementById("cartItems");
+  cartItems.innerHTML = "";  // FIXED from 'list.innerHTML = ""' to correct variable
+
+  let total = 0;
+  for (let code in cart) {
+    const item = cart[code];
+    total += item.price * item.qty;
+
+    const div = document.createElement("div");
+    div.className = "d-flex justify-content-between align-items-center mb-2";
+    div.innerHTML = `
+      <span>${item.title} (${code}) x${item.qty} - ${item.price * item.qty} MMK</span>
+      <button onclick="removeFromCart('${code}')" class="btn btn-sm btn-danger">Remove</button>
+    `;
+    cartItems.appendChild(div);
+  }
+
+  document.getElementById("cartTotal").innerText = `Total: ${total} MMK`;
+
+  const cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+  cartModal.show();
+}
+
+function removeFromCart(code) {
+  delete cart[code];
+  openCartModal();
+}
+
+function clearCart() {
+  cart = {};
+  const cartModalEl = document.getElementById('cartModal');
+  const modalInstance = bootstrap.Modal.getInstance(cartModalEl);
+  if (modalInstance) modalInstance.hide();
+}
+
+// Proceed to checkout
+function checkout() {
+  // Hide cart modal
+  const cartModalEl = document.getElementById('cartModal');
+  const cartModalInstance = bootstrap.Modal.getInstance(cartModalEl);
+  if (cartModalInstance) cartModalInstance.hide();
+
+  // Show checkout modal
+  const checkoutModal = new bootstrap.Modal(document.getElementById("checkoutModal"));
+  checkoutModal.show();
+
+  calculateDiscount();
+}
+
+function cancelCheckout() {
+  const checkoutModalEl = document.getElementById('checkoutModal');
+  const checkoutModalInstance = bootstrap.Modal.getInstance(checkoutModalEl);
+  if (checkoutModalInstance) checkoutModalInstance.hide();
+}
+
+function calculateDiscount() {
+  let total = 0;
+  for (let code in cart) total += cart[code].price * cart[code].qty;
+  const discount = total > 50000 ? 5000 : 0; // Example discount logic
+  const net = total - discount;
+  // Use innerText for multiple lines or better to update 3 separate spans if needed
+  document.getElementById("checkoutTotal").innerText = `Total: ${total} MMK\nDiscount: ${discount} MMK\nNet: ${net} MMK`;
+}
+
+function placeOrder() {
+  const name = document.getElementById("custName").value.trim();
+  const phone = document.getElementById("custPhone").value.trim();
+  const email = document.getElementById("custEmail").value.trim();
+  const address = document.getElementById("custAddress").value.trim();
+
+  if (!name || !phone || !email || !address) {
+    alert("Please fill all the checkout fields.");
+    return;
+  }
+
+  let total = 0;
+  let codeList = [];
+  for (let code in cart) {
+    const item = cart[code];
+    total += item.price * item.qty;
+    codeList.push(`${code} x${item.qty}`);
+  }
+  if (codeList.length === 0) {
+    alert("Your cart is empty.");
+    return;
+  }
+
+  const discount = total > 50000 ? 5000 : 0;
+  const netTotal = total - discount;
+
+  // Prepare data object to send
+  const orderData = {
+    action: "placeOrder",
+    name,
+    phone,
+    email,
+    address,
+    code: codeList.join(", "),
+    total,
+    discount,
+    netTotal
+  };
+
+  console.log("Sending order data:", orderData);
+
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(orderData),
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+    .then(response => {
+      if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+      return response.json();
+    })
+    .then(data => {
+      if (data && data.id) {
+        alert("Order Placed! Your Order ID: " + data.id);
+        cart = {};
+        // Hide checkout modal using Bootstrap modal API
+        const checkoutModalEl = document.getElementById("checkoutModal");
+        const checkoutModal = bootstrap.Modal.getInstance(checkoutModalEl);
+        if (checkoutModal) checkoutModal.hide();
+
+        loadCustomerProducts(); // Refresh products
+      } else {
+        alert("Unexpected response from server.");
+        console.error("Unexpected server response:", data);
+      }
+    })
+    .catch(error => {
+      alert("Failed to place order. Please try again.");
+      console.error("Error placing order:", error);
+    });
+}
+
+
+// Initial load and periodic refresh
+document.addEventListener("DOMContentLoaded", () => {
+  loadCustomerProducts();
+  setInterval(loadCustomerProducts, 15000); // Refresh every 15 seconds
+});

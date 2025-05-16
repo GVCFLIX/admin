@@ -1,165 +1,87 @@
+<!-- ADMIN.HTML -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin Panel</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    section { margin-bottom: 40px; }
-    input, textarea, select, button { display: block; margin: 10px 0; padding: 8px; width: 100%; max-width: 400px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
-    .card { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
 </head>
-<body>
+<body class="bg-gray-100">
+  <!-- Login Section -->
+  <div id="loginSection" class="flex items-center justify-center h-screen">
+    <div class="bg-white p-6 rounded shadow w-full max-w-md">
+      <h2 class="text-2xl font-bold mb-4 text-center">Admin Login</h2>
+      <input id="adminEmail" type="email" placeholder="Email" class="form-control mb-3">
+      <input id="adminPassword" type="password" placeholder="Password" class="form-control mb-3">
+      <button onclick="loginAdmin()" class="btn btn-primary w-full">Login</button>
+    </div>
+  </div>
 
-<h1>Admin Panel</h1>
+  <!-- Dashboard Section -->
+  <div id="dashboardSection" class="hidden p-4">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold">Admin Dashboard</h2>
+      <button onclick="logout()" class="btn btn-danger">Logout</button>
+    </div>
 
-<!-- 1. Upload Section -->
-<section>
-  <h2>Upload Product</h2>
-  <input type="text" id="imageUrl" placeholder="Image URL">
-  <input type="text" id="title" placeholder="Title">
-  <input type="text" id="itemCode" placeholder="Item Code">
-  <input type="text" id="size" placeholder="Size">
-  <input type="number" id="price" placeholder="Price (Ks)">
-  <textarea id="details" placeholder="Details"></textarea>
-  <button onclick="uploadProduct()">Upload</button>
-</section>
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="adminTabs">
+      <li class="nav-item"><a class="nav-link active" href="#uploadProduct" data-bs-toggle="tab">Upload Product</a></li>
+      <li class="nav-item"><a class="nav-link" href="#productList" data-bs-toggle="tab">Product List</a></li>
+      <li class="nav-item"><a class="nav-link" href="#orders" data-bs-toggle="tab">Orders</a></li>
+      <li class="nav-item"><a class="nav-link" href="#discounts" data-bs-toggle="tab">Discounts</a></li>
+    </ul>
 
-<!-- 2. Product Section -->
-<section>
-  <h2>Product List</h2>
-  <div id="productList"></div>
-</section>
+    <div class="tab-content">
+      <!-- Upload Product -->
+      <div class="tab-pane fade show active" id="uploadProduct">
+        <div class="card p-4">
+          <input id="imgURL" class="form-control mb-2" placeholder="Image URL">
+          <input id="title" class="form-control mb-2" placeholder="Title">
+          <input id="itemCode" class="form-control mb-2" placeholder="Item Code">
+          <input id="size" class="form-control mb-2" placeholder="Size">
+          <input id="price" class="form-control mb-2" placeholder="Price">
+          <input id="stock" class="form-control mb-2" placeholder="Stock">
+          <button onclick="uploadProduct()" class="btn btn-success">Upload</button>
+          <button onclick="clearForm()" class="btn btn-secondary ml-2">Clear</button>
+        </div>
+      </div>
 
-<!-- 3. Order Section -->
-<section>
-  <h2>Orders</h2>
-  <div id="orderList"></div>
-</section>
+      <!-- Product List -->
+      <div class="tab-pane fade" id="productList">
+        <div id="productTable" class="table-responsive mt-3"></div>
+      </div>
 
-<!-- Order Detail Modal -->
-<div id="orderDetail" style="display:none;" class="card"></div>
+      <!-- Orders -->
+      <div class="tab-pane fade" id="orders">
+        <div id="ordersTable" class="table-responsive mt-3"></div>
+        <div id="orderDetailsModal" class="modal fade" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Order Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body" id="orderDetailsBody"></div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-<script>
-const BASE_URL = "https://script.google.com/macros/s/AKfycbweaRGbyHhZkvgpSl80opRnLnG9GeF93Uy4BFTzOtHgHNEC_4DHDrJ7643pSy__A2YFWA/exec"; // replace with your deployed Apps Script URL
+      <!-- Discounts -->
+      <div class="tab-pane fade" id="discounts">
+        <!-- Add discount management logic here -->
+      </div>
+    </div>
+  </div>
 
-function fetchProducts() {
-  fetch(`${BASE_URL}?action=getProducts`)
-    .then(res => res.json())
-    .then(data => {
-      let html = '<table><tr><th>Image</th><th>Title</th><th>Item Code</th><th>Size</th><th>Price</th><th>Stock</th></tr>';
-      data.forEach(p => {
-        html += `<tr>
-          <td><img src="${p['Image URL']}" width="50"></td>
-          <td>${p.Title}</td>
-          <td>${p['Item Code']}</td>
-          <td>${p.Size}</td>
-          <td>${p['Price (Ks)']}</td>
-          <td>
-            <input type="number" value="${p.Stock}" onchange="updateStock('${p['Item Code']}', this.value)">
-          </td>
-        </tr>`;
-      });
-      html += '</table>';
-      document.getElementById("productList").innerHTML = html;
-    });
-}
-
-function uploadProduct() {
-  const data = {
-    imageUrl: document.getElementById("imageUrl").value,
-    title: document.getElementById("title").value,
-    itemCode: document.getElementById("itemCode").value,
-    size: document.getElementById("size").value,
-    price: document.getElementById("price").value,
-    details: document.getElementById("details").value,
-  };
-
-  fetch(`${BASE_URL}?action=uploadProduct`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-    headers: {'Content-Type': 'application/json'}
-  }).then(res => res.text())
-    .then(alert);
-}
-
-function updateStock(itemCode, stock) {
-  fetch(`${BASE_URL}?action=updateStock`, {
-    method: 'POST',
-    body: JSON.stringify({ itemCode, stock }),
-    headers: {'Content-Type': 'application/json'}
-  });
-}
-
-function fetchOrders() {
-  fetch(`${BASE_URL}?action=getOrders`)
-    .then(res => res.json())
-    .then(data => {
-      let html = '<table><tr><th>Order ID</th><th>Title</th><th>Item Code</th><th>Name</th><th>Phone</th><th>Details</th></tr>';
-      data.forEach(o => {
-        html += `<tr>
-          <td>${o['Order ID']}</td>
-          <td>${o.Title}</td>
-          <td>${o['Item Code']}</td>
-          <td>${o.Name}</td>
-          <td>${o.Phone}</td>
-          <td><button onclick="viewOrderDetails('${o['Order ID']}')">View</button></td>
-        </tr>`;
-      });
-      html += '</table>';
-      document.getElementById("orderList").innerHTML = html;
-    });
-}
-
-function viewOrderDetails(orderId) {
-  fetch(`${BASE_URL}?action=getOrderDetails&id=${orderId}`)
-    .then(res => res.json())
-    .then(data => {
-      let html = `<h3>Order Details</h3>
-        <p><strong>Order ID:</strong> ${data['Order ID']}</p>
-        <p><strong>Title:</strong> ${data.Title}</p>
-        <p><strong>Item Code:</strong> ${data['Item Code']}</p>
-        <p><strong>Size:</strong> ${data.Size}</p>
-        <p><strong>Total:</strong> ${data['Total Amount']}</p>
-        <p><strong>Name:</strong> ${data.Name}</p>
-        <p><strong>Phone:</strong> ${data.Phone}</p>
-        <p><strong>Email:</strong> ${data.Email}</p>
-        <p><strong>Address:</strong> ${data.Address}</p>
-        <label><strong>Status:</strong>
-          <select onchange="changeOrderStatus('${data['Order ID']}', this.value)">
-            <option ${data['Order Status'] === 'Order Pending' ? 'selected' : ''}>Order Pending</option>
-            <option ${data['Order Status'] === 'Order Accepted' ? 'selected' : ''}>Order Accepted</option>
-            <option ${data['Order Status'] === 'Reach at Delivery' ? 'selected' : ''}>Reach at Delivery</option>
-            <option ${data['Order Status'] === 'Complete' ? 'selected' : ''}>Complete</option>
-          </select>
-        </label>
-        <button onclick="document.getElementById('orderDetail').style.display='none'">Close</button>
-      `;
-      document.getElementById("orderDetail").innerHTML = html;
-      document.getElementById("orderDetail").style.display = "block";
-    });
-}
-
-function changeOrderStatus(orderId, status) {
-  fetch(`${BASE_URL}?action=updateOrderStatus`, {
-    method: 'POST',
-    body: JSON.stringify({ orderId, status }),
-    headers: { 'Content-Type': 'application/json' }
-  });
-}
-
-// Auto-update every 15 seconds
-setInterval(() => {
-  fetchProducts();
-  fetchOrders();
-}, 15000);
-
-// Initial load
-fetchProducts();
-fetchOrders();
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>
