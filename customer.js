@@ -3,8 +3,17 @@ let cart = {};
 
 // Display products
 function loadCustomerProducts() {
-  fetch(API_URL + "?action=getProducts")
-    .then(res => res.json())
+  fetch(`${API_URL}?action=getProducts`, {
+    method: 'GET',
+    mode: 'cors',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+    .then(res => {
+      if (!res.ok) throw new Error('Network response was not ok');
+      return res.json();
+    })
     .then(products => {
       const container = document.getElementById("productContainer");
       container.innerHTML = "";
@@ -51,7 +60,7 @@ function openImageModal(url) {
 // Show cart modal
 function openCartModal() {
   const cartItems = document.getElementById("cartItems");
-  cartItems.innerHTML = "";  // FIXED from 'list.innerHTML = ""' to correct variable
+  cartItems.innerHTML = "";
 
   let total = 0;
   for (let code in cart) {
@@ -87,22 +96,14 @@ function clearCart() {
 
 // Proceed to checkout
 function checkout() {
-  // Hide cart modal
   const cartModalEl = document.getElementById('cartModal');
   const cartModalInstance = bootstrap.Modal.getInstance(cartModalEl);
   if (cartModalInstance) cartModalInstance.hide();
 
-  // Show checkout modal
   const checkoutModal = new bootstrap.Modal(document.getElementById("checkoutModal"));
   checkoutModal.show();
 
   calculateDiscount();
-}
-
-function cancelCheckout() {
-  const checkoutModalEl = document.getElementById('checkoutModal');
-  const checkoutModalInstance = bootstrap.Modal.getInstance(checkoutModalEl);
-  if (checkoutModalInstance) checkoutModalInstance.hide();
 }
 
 function calculateDiscount() {
@@ -115,7 +116,6 @@ function calculateDiscount() {
   document.getElementById("checkoutDiscount").innerText = discount;
   document.getElementById("checkoutNet").innerText = net;
 }
-
 
 function placeOrder() {
   const name = document.getElementById("custName").value.trim();
@@ -143,7 +143,6 @@ function placeOrder() {
   const discount = total > 50000 ? 5000 : 0;
   const netTotal = total - discount;
 
-  // Prepare data object to send
   const orderData = {
     action: "placeOrder",
     name,
@@ -156,14 +155,13 @@ function placeOrder() {
     netTotal
   };
 
-  console.log("Sending order data:", orderData);
-
   fetch(API_URL, {
     method: "POST",
     body: JSON.stringify(orderData),
     headers: {
       "Content-Type": "application/json"
-    }
+    },
+    mode: 'cors'
   })
     .then(response => {
       if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
@@ -173,15 +171,12 @@ function placeOrder() {
       if (data && data.id) {
         alert("Order Placed! Your Order ID: " + data.id);
         cart = {};
-        // Hide checkout modal using Bootstrap modal API
         const checkoutModalEl = document.getElementById("checkoutModal");
         const checkoutModal = bootstrap.Modal.getInstance(checkoutModalEl);
         if (checkoutModal) checkoutModal.hide();
-
-        loadCustomerProducts(); // Refresh products
+        loadCustomerProducts();
       } else {
-        alert("Unexpected response from server.");
-        console.error("Unexpected server response:", data);
+        throw new Error("Unexpected response from server");
       }
     })
     .catch(error => {
@@ -190,9 +185,8 @@ function placeOrder() {
     });
 }
 
-
 // Initial load and periodic refresh
 document.addEventListener("DOMContentLoaded", () => {
   loadCustomerProducts();
-  setInterval(loadCustomerProducts, 30000); // Refresh every 30 seconds
+  setInterval(loadCustomerProducts, 30000);
 });
